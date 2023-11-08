@@ -34,7 +34,7 @@ def fetchJsonByAge(min: int, max: int):
                         continue
     return json
 
-for i in range(33,120):
+for i in range(32,120):
     sleep(1)
     json = fetchJsonByAge(i,i+1)
 
