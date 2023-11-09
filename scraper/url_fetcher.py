@@ -4,6 +4,8 @@ import hashlib
 import os
 import time
 
+from colorama import Fore
+
 from threading import Thread
 
 def sha1(input):
@@ -28,27 +30,36 @@ class Notice:
         self.full_data_url = self.links["self"]["href"]
         self.images_link = self.links["images"]["href"]
         
+        self.full_data = None
+
         try:
             self.thumbnail = self.links["thumbnail"]["href"]
         except:
             pass
 
     def fetch_fulldata(self):
-        self.full_data = requests.get(self.full_data_url).json()
-        return requests.get(self.full_data_url).json()
+        try:
+            self.full_data = requests.get(self.full_data_url).json()
+        except:
+            pass
+        return self.full_data
 
     def fetch_images(self):
         res = requests.get(self.images_link)
-        images_urls = res.json()["_embedded"]["images"]
         images = []
-        
 
-        for url in images_urls:
-            image = Image(url)
+        try:
+            images_urls = res.json()["_embedded"]["images"]
+            
 
-            res = requests.get(image.url, stream=True)
+            for url in images_urls:
+                image = Image(url)
 
-            images.append(res.content)
+                res = requests.get(image.url, stream=True)
+
+                images.append(res.content)
+        except:
+            pass
 
         self.images = images
         return images
@@ -57,18 +68,17 @@ def processData(data):
     notice = Notice(data)
     hash = sha1(dumps(notice.entity_id))
     path = f"\\data\\{hash}\\"
-    if not os.path.exists(os.getcwd()+path):
-        os.mkdir(os.getcwd()+path)
-    else:
-        return
 
-    print("Starting fetching images for "+hash)
-
+    print(f"{Fore.BLACK}[{Fore.GREEN}START{Fore.BLACK}] {Fore.BLUE}Starting fetching images for {hash}")
+    
     notice.fetch_images()
     notice.fetch_fulldata()
 
-    if not os.path.exists(os.getcwd()+path):
+    if not os.path.exists(os.getcwd()+path) and len(notice.images) > 0:
         os.mkdir(os.getcwd()+path)
+    else:
+        print(f"{Fore.BLACK}[{Fore.RED}ERROR{Fore.BLACK}] {Fore.RED}Skipped fetching images for {hash}")
+        return
 
     path = path.replace("\\","/")[1:]
 
@@ -78,7 +88,7 @@ def processData(data):
     for image in notice.images:
         with open(f"{path}{sha1(str(image))}.jpeg","wb") as img:
             img.write(image)
-    print("Finished fetching images for "+hash)
+    print(f"{Fore.BLACK}[{Fore.GREEN}SUCESS{Fore.BLACK}] {Fore.GREEN}Finished fetching images for {hash}")
 
 def process(json):
     threads = []
@@ -106,8 +116,8 @@ for i in range(0,24):
     threads.append(th)
 """
 
-for i in range(25,31):
-    json_list = loads(open(f"age\\{i}.json").read())
+for i in range(1,31):
+    json_list = loads(open(f"data/age/{i}.json").read())
 
     for json in json_list:
         th = Thread(target=process,args=[json])
@@ -116,5 +126,5 @@ for i in range(25,31):
         threads.append(th)
         time.sleep(5)
 
-for thread in threads:
+for thread in threads: 
     thread.join()
